@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="manifest" href="manifest.json">
+    <title>Focusifyr Tracking Sheet</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Focusifyr Tracking Sheet™</h1>
+                <p>Transform Your Life in 4 Weeks ⚡</p>
+            </div>
+            <div class="header-controls">
+                <button id="theme-toggle" class="icon-btn" title="Toggle Dark Mode">🌙</button>
+                <button id="stats-btn" class="icon-btn" title="View Statistics">📊</button>
+                <button id="export-btn" class="icon-btn" title="Export Data">💾</button>
+                <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="tracking">Tracking</button>
+            <button class="tab-btn" data-tab="analytics">Analytics</button>
+            <button class="tab-btn" data-tab="reports">Reports</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+        </nav>
+
+        <main class="main-content">
+            <!-- Tracking Tab -->
+            <div id="tracking" class="tab-content active">
+                <section id="week1" class="week-section">
+                    <h2>📅 Week 1 – Build Your Foundation</h2>
+                    <p>Lay the groundwork for success. Set clear goals, track your habits.</p>
+                    <div id="week1-habits" class="habits-grid"></div>
+                </section>
+
+                <section id="week2" class="week-section">
+                    <h2>🚀 Week 2 – Master Your Focus</h2>
+                    <p>Learn to eliminate distractions and focus on what truly matters.</p>
+                    <div id="week2-habits" class="habits-grid"></div>
+                </section>
+
+                <section id="week3" class="week-section">
+                    <h2>💡 Week 3 – Optimize Your Workflow</h2>
+                    <p>Streamline your daily actions, automate small tasks.</p>
+                    <div id="week3-habits" class="habits-grid"></div>
+                </section>
+
+                <section id="week4" class="week-section">
+                    <h2>🏆 Week 4 – Level Up & Commit</h2>
+                    <p>Push past plateaus, track your wins, integrate your new habits.</p>
+                    <div id="week4-habits" class="habits-grid"></div>
+                </section>
+
+                <section id="progress-summary" class="progress-section">
+                    <h2>Progress Summary</h2>
+                    <div id="summary" class="summary-grid"></div>
+                </section>
+
+                <section id="custom-routines" class="custom-section">
+                    <h2>My Custom Routines</h2>
+                    <p>Add your own habits and tasks to optimize your routine.</p>
+                    <div id="custom-list" class="custom-grid"></div>
+                    <div class="btn-group">
+                        <button id="add-custom-habit" class="btn btn-primary">+ Custom Habit</button>
+                        <button id="add-custom-task" class="btn btn-primary">+ Custom Task</button>
+                        <button id="customize-btn" class="btn btn-secondary">Customize Week Habits</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analytics" class="tab-content">
+                <section class="analytics-section">
+                    <h2>Your Progress Analytics</h2>
+                    <div class="charts-container">
+                        <div class="chart-wrapper">
+                            <h3>Week 1-4 Completion Rate</h3>
+                            <canvas id="weekProgressChart"></canvas>
+                        </div>
+                        <div class="chart-wrapper">
+                            <h3>Habit Completion Trends</h3>
+                            <canvas id="habitTrendChart"></canvas>
+                        </div>
+                        <div class="chart-wrapper">
+                            <h3>Weekly Performance</h3>
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="stats-summary">
+                        <div class="stat-card">
+                            <span class="stat-value" id="stat-total-completed">0</span>
+                            <span class="stat-label">Total Completed</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="stat-current-streak">0</span>
+                            <span class="stat-label">Current Streak</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="stat-completion-rate">0%</span>
+                            <span class="stat-label">Completion Rate</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="stat-best-week">0</span>
+                            <span class="stat-label">Best Week</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <section class="reports-section">
+                    <h2>Your Reports</h2>
+                    <div id="reports-content"></div>
+                </section>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="tab-content">
+                <section class="settings-section">
+                    <h2>Settings</h2>
+                    <div class="settings-group">
+                        <h3>Notifications</h3>
+                        <label><input type="checkbox" id="enable-notifications" checked> Enable Daily Reminder</label>
+                        <label>Reminder Time: <input type="time" id="reminder-time" value="09:00"></label>
+                    </div>
+                    <div class="settings-group">
+                        <h3>Data Management</h3>
+                        <button class="btn btn-secondary" id="export-data-btn">Export Data as CSV</button>
+                        <button class="btn btn-secondary" id="import-data-btn">Import Data</button>
+                        <input type="file" id="import-file" accept=".csv,.json" style="display:none">
+                        <button class="btn btn-danger" id="clear-data-btn">Reset All Data</button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Dialogs -->
+    <div id="notification-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="notification-title"></h2>
+            <p id="notification-message"></p>
+            <button class="btn btn-primary" onclick="closeNotification()">OK</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
