@@ -790,45 +790,7 @@ const percent=(window.scrollY/total)*100;
 progress.style.width=percent+"%";
 
 });
-/* Shooting Star */
 
-.shooting-star{
-
-position:fixed;
-
-width:3px;
-
-height:3px;
-
-background:white;
-
-box-shadow:0 0 20px white;
-
-animation:shoot 2s linear forwards;
-
-z-index:-1;
-
-}
-
-@keyframes shoot{
-
-0%{
-
-transform:translate(0,0);
-
-opacity:1;
-
-}
-
-100%{
-
-transform:translate(-700px,700px);
-
-opacity:0;
-
-}
-
-}
 // =======================================
 // ADVANCED THREE.JS SCENE
 // =======================================
