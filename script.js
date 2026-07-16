@@ -688,6 +688,7 @@ behavior:"smooth"
 });
 
 });
+
 // =======================================
 // HERO PARALLAX
 // =======================================
@@ -791,140 +792,6 @@ progress.style.width=percent+"%";
 
 });
 
-// =======================================
-// ADVANCED THREE.JS SCENE
-// =======================================
-
-scene.fog = new THREE.FogExp2(0x050816,0.015);
-
-const camera = new THREE.PerspectiveCamera(
-60,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-);
-
-camera.position.set(0,0,25);
-
-const renderer = new THREE.WebGLRenderer({
-
-canvas:document.querySelector("#bg"),
-
-alpha:true,
-
-antialias:true
-
-});
-
-renderer.setPixelRatio(window.devicePixelRatio);
-
-renderer.setSize(window.innerWidth,window.innerHeight);
-
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-// Lights
-
-const ambient = new THREE.AmbientLight(0xffffff,.7);
-
-scene.add(ambient);
-
-const pointLight = new THREE.PointLight(0x4e89ff,5);
-
-pointLight.position.set(15,10,20);
-
-scene.add(pointLight);
-
-const pointLight2 = new THREE.PointLight(0x00d4ff,3);
-
-pointLight2.position.set(-15,-10,-10);
-
-scene.add(pointLight2);
-
-const objects=[];
-
-for(let i=0;i<40;i++){
-
-const geometry=new THREE.IcosahedronGeometry(
-
-Math.random()*0.7+0.3,
-
-0
-
-);
-
-const material=new THREE.MeshStandardMaterial({
-
-color:[
-0x4e89ff,
-0x7b61ff,
-0x00d4ff
-][Math.floor(Math.random()*3)],
-
-wireframe:Math.random()>.6,
-
-metalness:.8,
-
-roughness:.2
-
-});
-
-const mesh=new THREE.Mesh(
-
-geometry,
-
-material
-
-);
-
-mesh.position.x=(Math.random()-.5)*50;
-
-mesh.position.y=(Math.random()-.5)*35;
-
-mesh.position.z=(Math.random()-.5)*40;
-
-scene.add(mesh);
-
-objects.push(mesh);
-
-}
-function animate(){
-
-requestAnimationFrame(animate);
-
-objects.forEach((mesh,index)=>{
-
-mesh.rotation.x+=0.002+(index*.00005);
-
-mesh.rotation.y+=0.003;
-
-mesh.position.y+=Math.sin(Date.now()*.001+index)*0.002;
-
-});
-
-renderer.render(scene,camera);
-
-}
-
-animate();
-document.addEventListener("mousemove",(e)=>{
-
-const mouseX=(e.clientX/window.innerWidth-.5)*8;
-
-const mouseY=(e.clientY/window.innerHeight-.5)*5;
-
-gsap.to(camera.position,{
-
-x:mouseX,
-
-y:-mouseY,
-
-duration:2,
-
-ease:"power2.out"
-
-});
-
-});
 // =======================================
 // STAGGER REVEAL
 // =======================================
