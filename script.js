@@ -1,901 +1,538 @@
-// =======================================
-// CREATE!!👌
-// Main JavaScript
-// Part 1
-// =======================================
+/**
+ * AETHELGARD - Cinematic Luxury Engine
+ * Powered by WebGL (Three.js), Web Audio API, and GSAP ScrollTrigger
+ */
 
-// Register GSAP Plugin
+// Global App States
+let scene, camera, renderer, starfield, earthMesh, atmosphereMesh, cityGroup, towerMesh, cloudParticles;
+let audioCtx, droneOsc, droneFilter, synthInterval;
+const container = document.getElementById('canvas-container');
 
-gsap.registerPlugin(ScrollTrigger);
+// Simulated Progress and Preload Sequencer
+let resourcesLoaded = 0;
+const resourcesToLoad = 100;
 
-// =======================================
-// Loader Animation
-// =======================================
-
-window.addEventListener("load", () => {
-
-gsap.to(".loader-progress",{
-
-width:"100%",
-
-duration:1.8,
-
-ease:"power3.out"
-
-});
-
-gsap.to("#loader",{
-
-opacity:0,
-
-delay:2,
-
-duration:1,
-
-pointerEvents:"none"
-
-});
-
-});
-
-// =======================================
-// Hero Animation
-// =======================================
-
-const heroTimeline = gsap.timeline();
-
-heroTimeline
-
-.from(".hero-badge",{
-
-opacity:0,
-
-y:40,
-
-duration:.8
-
-})
-
-.from(".hero h1",{
-
-opacity:0,
-
-y:60,
-
-duration:1
-
-},"-=0.4")
-
-.from(".hero p",{
-
-opacity:0,
-
-y:40,
-
-duration:.8
-
-},"-=0.5")
-
-.from(".hero-buttons",{
-
-opacity:0,
-
-y:30,
-
-duration:.7
-
-},"-=0.5")
-
-.from(".hero-stats div",{
-
-opacity:0,
-
-y:30,
-
-stagger:.2,
-
-duration:.6
-
-},"-=0.5")
-
-.from(".floating-card",{
-
-opacity:0,
-
-x:80,
-
-stagger:.25,
-
-duration:.8
-
-},"-=1");
-
-
-// =======================================
-// Scroll Animation
-// =======================================
-
-gsap.utils.toArray("section").forEach(section=>{
-
-gsap.from(section,{
-
-opacity:0,
-
-y:80,
-
-duration:1,
-
-scrollTrigger:{
-
-trigger:section,
-
-start:"top 80%"
-
+function updatePreloader() {
+    if (resourcesLoaded < resourcesToLoad) {
+        resourcesLoaded += 2;
+        document.getElementById('load-bar').style.width = `${resourcesLoaded}%`;
+        setTimeout(updatePreloader, 30);
+    } else {
+        document.getElementById('load-status').innerText = "ARCHITECTURAL MATRIX SYNCED";
+        const enterBtn = document.getElementById('enter-btn');
+        enterBtn.classList.remove('hidden');
+        enterBtn.classList.add('animate-pulse');
+        enterBtn.addEventListener('click', startCinematicJourney);
+    }
 }
 
+// Start visual loading bar animation
+window.addEventListener('DOMContentLoaded', () => {
+    updatePreloader();
 });
 
-});
+/**
+ * -------------------------------------------------------------
+ * 1. DESIGNER SYNTHESIZER (Web Audio API)
+ * Generates an organic, cinematic, multi-voice ambient drone
+ * -------------------------------------------------------------
+ */
+function initAmbientSynth() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Master Gain & Limiter
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 4); // Fade in over 4 seconds
+    masterGain.connect(audioCtx.destination);
 
+    // Deep Resonant Filter
+    droneFilter = audioCtx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.setValueAtTime(140, audioCtx.currentTime);
+    droneFilter.Q.setValueAtTime(3.5, audioCtx.currentTime);
+    droneFilter.connect(masterGain);
 
-// =======================================
-// Navbar Background
-// =======================================
+    // Osc Voice 1 (Fundamental root chord base)
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(55.00, audioCtx.currentTime); // A1
+    
+    // Osc Voice 2 (Harmonic Fifth)
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(82.41, audioCtx.currentTime); // E2
+    
+    // Low Frequency Oscillator (LFO) to modulate cutoff frequency
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(0.12, audioCtx.currentTime); // Ultra slow sweeps
 
-window.addEventListener("scroll",()=>{
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.setValueAtTime(45, audioCtx.currentTime);
 
-const header=document.querySelector("header");
+    // Connect LFO Modulators
+    lfo.connect(lfoGain);
+    lfoGain.connect(droneFilter.frequency);
+    
+    // Connect audio signal chains
+    osc1.connect(droneFilter);
+    osc2.connect(droneFilter);
 
-if(window.scrollY>60){
+    // Run oscillators
+    osc1.start();
+    osc2.start();
+    lfo.start();
 
-header.style.background="rgba(5,8,22,.85)";
+    // Procedural chord progression cycles
+    const chords = [
+        { f1: 55.00, f2: 82.41 },   // Amin (A1, E2)
+        { f1: 65.41, f2: 97.99 },   // Cmaj (C2, G2)
+        { f1: 51.91, f2: 77.78 },   // Fm   (F1, C2)
+        { f1: 58.27, f2: 87.31 }    // Gmaj (G1, D2)
+    ];
+    let chordIndex = 0;
 
-header.style.backdropFilter="blur(25px)";
-
-}else{
-
-header.style.background="rgba(5,8,22,.45)";
-
+    synthInterval = setInterval(() => {
+        chordIndex = (chordIndex + 1) % chords.length;
+        const nextChord = chords[chordIndex];
+        osc1.frequency.exponentialRampToValueAtTime(nextChord.f1, audioCtx.currentTime + 6);
+        osc2.frequency.exponentialRampToValueAtTime(nextChord.f2, audioCtx.currentTime + 6);
+    }, 12000); // Shift sound palette every 12 seconds
 }
 
+// Audio Control HUD binding
+const muteBtn = document.getElementById('mute-btn');
+let isMuted = false;
+muteBtn.addEventListener('click', () => {
+    if (audioCtx) {
+        if (isMuted) {
+            audioCtx.resume();
+            document.getElementById('audio-icon').innerText = '🔊';
+            isMuted = false;
+        } else {
+            audioCtx.suspend();
+            document.getElementById('audio-icon').innerText = '🔇';
+            isMuted = true;
+        }
+    }
 });
 
+/**
+ * -------------------------------------------------------------
+ * 2. WEBGL SCENE ARCHITECTURE (Three.js)
+ * -------------------------------------------------------------
+ */
+function initThreeEngine() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-// =======================================
-// Counter Animation
-// =======================================
+    // Standard high performance renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    container.appendChild(renderer.domElement);
 
-const counters=document.querySelectorAll(".hero-stats h2");
+    // Initial Space Camera position (high in orbit)
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x070708, 0.015);
 
-counters.forEach(counter=>{
+    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 180);
 
-const update=()=>{
-
-const target=parseInt(counter.innerText);
-
-let current=0;
-
-const increment=target/120;
-
-const timer=setInterval(()=>{
-
-current+=increment;
-
-if(current>=target){
-
-counter.innerText=target+
-
-(counter.innerText.includes("%")?"%":"+");
-
-clearInterval(timer);
-
-}else{
-
-counter.innerText=Math.floor(current);
-
+    // Build Scene Elements
+    createGalaxyBackground();
+    createProceduralEarth();
+    createFuturisticCity();
 }
 
-},15);
+/**
+ * Procedural Galaxy Structure
+ * Generates thousands of stars forming a distant glowing star system
+ */
+function createGalaxyBackground() {
+    const starCount = 3500;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(starCount * 3);
+    const colors = new Float32Array(starCount * 3);
 
-};
+    for (let i = 0; i < starCount * 3; i += 3) {
+        // Spherical distribution
+        const radius = 100 + Math.random() * 300;
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
 
-update();
+        positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+        positions[i+1] = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i+2] = radius * Math.cos(phi);
 
-});
+        // Warm Gold to Deep Stellar Blue color grading
+        const mixRatio = Math.random();
+        colors[i] = mixRatio * 1.0 + (1 - mixRatio) * 0.4;     // R
+        colors[i+1] = mixRatio * 0.85 + (1 - mixRatio) * 0.5;  // G
+        colors[i+2] = mixRatio * 0.6 + (1 - mixRatio) * 1.0;   // B
+    }
 
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-// =======================================
-// Button Hover Effect
-// =======================================
+    const material = new THREE.PointsMaterial({
+        size: 0.8,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+    });
 
-document.querySelectorAll("button,.btn-primary,.btn-secondary")
-
-.forEach(btn=>{
-
-btn.addEventListener("mouseenter",()=>{
-
-gsap.to(btn,{
-
-scale:1.05,
-
-duration:.3
-
-});
-
-});
-
-btn.addEventListener("mouseleave",()=>{
-
-gsap.to(btn,{
-
-scale:1,
-
-duration:.3
-
-});
-
-});
-
-});
-// =======================================
-// THREE.JS
-// =======================================
-
-const scene=new THREE.Scene();
-
-const camera=new THREE.PerspectiveCamera(
-
-75,
-
-window.innerWidth/window.innerHeight,
-
-0.1,
-
-1000
-
-);
-
-const renderer=new THREE.WebGLRenderer({
-
-canvas:document.querySelector("#bg"),
-
-alpha:true,
-
-antialias:true
-
-});
-
-renderer.setPixelRatio(window.devicePixelRatio);
-
-renderer.setSize(window.innerWidth,window.innerHeight);
-
-camera.position.z=30;
-
-
-// Lighting
-
-const light=new THREE.PointLight(0x4e89ff,2);
-
-light.position.set(15,15,20);
-
-scene.add(light);
-
-const ambient=new THREE.AmbientLight(0xffffff,.6);
-
-scene.add(ambient);
-
-
-// Geometry
-
-const geometry=new THREE.IcosahedronGeometry(8,1);
-
-const material=new THREE.MeshStandardMaterial({
-
-color:0x4e89ff,
-
-wireframe:true
-
-});
-
-const object=new THREE.Mesh(
-
-geometry,
-
-material
-
-);
-
-scene.add(object);
-
-
-// Animation Loop
-
-function animate(){
-
-requestAnimationFrame(animate);
-
-object.rotation.x+=0.002;
-
-object.rotation.y+=0.004;
-
-renderer.render(scene,camera);
-
+    starfield = new THREE.Points(geometry, material);
+    scene.add(starfield);
 }
 
-animate();
-
-
-// Resize
-
-window.addEventListener("resize",()=>{
-
-camera.aspect=
-
-window.innerWidth/window.innerHeight;
-
-camera.updateProjectionMatrix();
-
-renderer.setSize(
-
-window.innerWidth,
-
-window.innerHeight
-
-);
-
-});
-document.addEventListener("mousemove",(e)=>{
-
-const x=(e.clientX/window.innerWidth-.5)*2;
-
-const y=(e.clientY/window.innerHeight-.5)*2;
-
-gsap.to(object.rotation,{
-
-x:y,
-
-y:x,
-
-duration:2
-
-});
-
-});
-document.querySelectorAll(".floating-card")
-
-.forEach((card,index)=>{
-
-gsap.to(card,{
-
-y:20,
-
-duration:2+index,
-
-repeat:-1,
-
-yoyo:true,
-
-ease:"sine.inOut"
-
-});
-
-});
-const cursor=document.createElement("div");
-
-cursor.style.position="fixed";
-
-cursor.style.width="18px";
-
-cursor.style.height="18px";
-
-cursor.style.borderRadius="50%";
-
-cursor.style.background="#4e89ff";
-
-cursor.style.pointerEvents="none";
-
-cursor.style.boxShadow="0 0 35px #4e89ff";
-
-cursor.style.zIndex="999999";
-
-document.body.appendChild(cursor);
-
-window.addEventListener("mousemove",(e)=>{
-
-gsap.to(cursor,{
-
-x:e.clientX-9,
-
-y:e.clientY-9,
-
-duration:.15
-
-});
-
-});
-// =======================================
-// PARTICLES
-// =======================================
-
-tsParticles.load("particles-js", {
-
-background: {
-color: "transparent"
-},
-
-fpsLimit: 120,
-
-particles: {
-
-number: {
-value: 180,
-density: {
-enable: true,
-area: 900
-}
-},
-
-color: {
-value: [
-"#4e89ff",
-"#00d4ff",
-"#7b61ff",
-"#ffffff"
-]
-},
-
-shape: {
-type: "circle"
-},
-
-opacity: {
-value: 0.35
-},
-
-size: {
-value: {
-min:1,
-max:4
-}
-},
-
-links: {
-
-enable:true,
-
-distance:140,
-
-color:"#4e89ff",
-
-opacity:.18,
-
-width:1
-
-},
-
-move:{
-
-enable:true,
-
-speed:1.4,
-
-direction:"none",
-
-random:false,
-
-straight:false,
-
-outModes:{
-default:"out"
+/**
+ * Procedural Earth & Atmosphere
+ * Dynamic rendering constructed of high-contrast shaders & procedural canvas maps
+ */
+function createProceduralEarth() {
+    const earthGroup = new THREE.Group();
+    earthGroup.position.set(0, -35, 40); // Offset downwards below the primary path
+
+    // Draw realistic high contrast geography on a 2D Canvas to use as texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Deep blue ocean background
+    ctx.fillStyle = '#060a12';
+    ctx.fillRect(0, 0, 1024, 512);
+    
+    // Draw highly stylized abstract continent shapes
+    ctx.fillStyle = '#101624';
+    for (let i = 0; i < 45; i++) {
+        ctx.beginPath();
+        const x = Math.random() * 1024;
+        const y = Math.random() * 512;
+        const radius = 40 + Math.random() * 150;
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Convert Canvas to ThreeJS texture
+    const earthTexture = new THREE.CanvasTexture(canvas);
+    
+    // Earth Sphere Geometry
+    const geo = new THREE.SphereGeometry(30, 64, 64);
+    const mat = new THREE.MeshStandardMaterial({
+        map: earthTexture,
+        roughness: 0.9,
+        metalness: 0.1,
+        bumpScale: 0.05
+    });
+
+    earthMesh = new THREE.Mesh(geo, mat);
+    earthGroup.add(earthMesh);
+
+    // Atmosphere Glow Layer (Slightly larger sphere with gold/cyan transparency)
+    const atmosGeo = new THREE.SphereGeometry(30.8, 32, 32);
+    const atmosMat = new THREE.MeshBasicMaterial({
+        color: 0xD4AF37,
+        transparent: true,
+        opacity: 0.12,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide
+    });
+    atmosphereMesh = new THREE.Mesh(atmosGeo, atmosMat);
+    earthGroup.add(atmosphereMesh);
+
+    scene.add(earthGroup);
+
+    // Global illumination setup
+    const directionalLight = new THREE.DirectionalLight(0xfff5e6, 2.5);
+    directionalLight.position.set(100, 50, 100);
+    scene.add(directionalLight);
+
+    const ambientLight = new THREE.AmbientLight(0x0c0d12, 0.4);
+    scene.add(ambientLight);
 }
 
+/**
+ * Procedural Future Luxury City
+ * Renders hundreds of geometric towers, moving traffic, and the master architectural column
+ */
+function createFuturisticCity() {
+    cityGroup = new THREE.Group();
+    cityGroup.position.set(0, -100, -120); // Hidden deeper down, accessed during zoom transition
+
+    const blockCount = 350;
+    const cityArea = 250;
+
+    for (let i = 0; i < blockCount; i++) {
+        // Randomize dimensions representing generic skyscrapers
+        const width = 2 + Math.random() * 6;
+        const height = 15 + Math.random() * 55;
+        const depth = 2 + Math.random() * 6;
+
+        const boxGeo = new THREE.BoxGeometry(width, height, depth);
+        
+        // Luxury aesthetic design (emissive dark blocks with gold trim borders)
+        const boxMat = new THREE.MeshStandardMaterial({
+            color: 0x0a0a0c,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0x050507
+        });
+
+        const building = new THREE.Mesh(boxGeo, boxMat);
+
+        // Grid distribution with offsets
+        const posX = (Math.random() - 0.5) * cityArea;
+        const posZ = (Math.random() - 0.5) * cityArea;
+        const posY = height / 2; // Bottom of building sits on ground zero
+
+        building.position.set(posX, posY, posZ);
+        cityGroup.add(building);
+    }
+
+    // THE MASTER TOWER (Aethelgard) - Centerpiece
+    const towerHeight = 110;
+    const towerGeo = new THREE.CylinderGeometry(1, 4, towerHeight, 3, 1, false);
+    const towerMat = new THREE.MeshStandardMaterial({
+        color: 0x0c0c0e,
+        roughness: 0.1,
+        metalness: 0.95,
+        emissive: 0x000000,
+        flatShading: true
+    });
+
+    towerMesh = new THREE.Mesh(towerGeo, towerMat);
+    towerMesh.position.set(0, towerHeight / 2, 0); // Rooted in the middle of the scene
+
+    // Decorative Golden Crown rings on top
+    const ringGeo = new THREE.TorusGeometry(2, 0.1, 16, 100);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xD4AF37 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, towerHeight - 2, 0);
+    towerMesh.add(ring);
+
+    // Glowing architectural column
+    const glowGeo = new THREE.CylinderGeometry(0.1, 0.1, towerHeight, 8);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: 0xD4AF37,
+        transparent: true,
+        opacity: 0.6
+    });
+    const coreGlow = new THREE.Mesh(glowGeo, glowMat);
+    towerMesh.add(coreGlow);
+
+    cityGroup.add(towerMesh);
+
+    // Volumetric Atmospheric Cloud Layer (used as entrance transition buffer)
+    const cloudCount = 120;
+    const cloudGeo = new THREE.DodecahedronGeometry(8, 1);
+    const cloudMat = new THREE.MeshBasicMaterial({
+        color: 0xd4af37,
+        transparent: true,
+        opacity: 0.08,
+        blending: THREE.AdditiveBlending
+    });
+
+    cloudParticles = new THREE.Group();
+    for (let c = 0; c < cloudCount; c++) {
+        const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+        cloud.position.set(
+            (Math.random() - 0.5) * 200,
+            towerHeight - 10 + (Math.random() - 0.5) * 30,
+            (Math.random() - 0.5) * 200
+        );
+        cloudParticles.add(cloud);
+    }
+    cityGroup.add(cloudParticles);
+
+    scene.add(cityGroup);
 }
 
-},
+/**
+ * -------------------------------------------------------------
+ * 3. THE HOLLYWOOD CINEMATIC INTRO TRANSITION
+ * Complete continuous shot timeline
+ * -------------------------------------------------------------
+ */
+function startCinematicJourney() {
+    // Play synthesis chord sweeps
+    initAmbientSynth();
 
-interactivity:{
+    // Fade and scale UI screen container layers
+    gsap.to('#intro-overlay', {
+        opacity: 0,
+        pointerEvents: 'none',
+        duration: 2.2,
+        ease: 'power3.out',
+        onComplete: () => {
+            document.getElementById('intro-overlay').style.display = 'none';
+        }
+    });
 
-events:{
+    // Reveal main landing HUD page overlay
+    gsap.to('#smooth-wrapper', { opacity: 1, duration: 4.0, delay: 1.5 });
+    gsap.to('#audio-hud', { opacity: 1, duration: 2.0, delay: 2.5 });
 
-onHover:{
+    // Cinematic Intro Cam Tracking Animation
+    const introTimeline = gsap.timeline({
+        onComplete: () => {
+            // Activate the interactive ScrollTrigger timeline binding for continuous user navigation
+            initScrollCameraBindings();
+        }
+    });
 
-enable:true,
+    // Intro Phase 1: Deep Space Orbit camera pan
+    introTimeline.to(camera.position, {
+        x: 0,
+        y: -10,
+        z: 110,
+        duration: 6.0,
+        ease: 'power1.inOut'
+    });
 
-mode:"grab"
+    // Intro Phase 2: Atmosphere orbital dive & zoom through clouds
+    introTimeline.to(camera.position, {
+        x: 0,
+        y: -65,
+        z: 45,
+        duration: 5.0,
+        ease: 'power2.inOut'
+    }, "-=1.5");
 
-},
+    // Fade cloud systems into focus as transition shield
+    introTimeline.to(scene.fog, {
+        density: 0.04,
+        duration: 3.0,
+        ease: 'power1.in'
+    }, "-=4.0");
 
-onClick:{
+    // Intro Phase 3: Transition to city view below
+    introTimeline.to(camera.position, {
+        x: 10,
+        y: -35,
+        z: -60,
+        duration: 5.0,
+        ease: 'power3.out',
+        onStart: () => {
+            // Reposition spatial elements dynamically for close-up framing
+            scene.fog.color.setHex(0x070708);
+        }
+    }, "-=1.0");
 
-enable:true,
-
-mode:"push"
-
+    // Disperse heavy transition clouds
+    introTimeline.to(scene.fog, {
+        density: 0.012,
+        duration: 4.0,
+        ease: 'power2.out'
+    }, "-=3.0");
 }
 
-},
+/**
+ * -------------------------------------------------------------
+ * 4. INTERACTIVE SCROLL-TRIGGER CAMERA BINDINGS
+ * Links standard scrolling smoothly with 3D camera sweeps
+ * -------------------------------------------------------------
+ */
+function initScrollCameraBindings() {
+    gsap.registerPlugin(ScrollTrigger);
 
-modes:{
+    // Camera scrolling pathway map config
+    const camTimeline = gsap.timeline({
+        scrollTrigger: {
+            trigger: "body",
+            start: "top top",
+            end: "bottom bottom",
+            scrub: 1.5, // Butter smooth transition
+            invalidateOnRefresh: true
+        }
+    });
 
-grab:{
-
-distance:180,
-
-links:{
-opacity:.7
+    // Scroll Stage 1: Rise slowly to face Master Tower
+    camTimeline.to(camera.position, {
+        x: -25,
+        y: -12,
+        z: -95,
+        ease: 'power1.inOut'
+    })
+    // Scroll Stage 2: Fast cinematic orbit to opposite side
+    .to(camera.position, {
+        x: 45,
+        y: 10,
+        z: -110,
+        ease: 'power1.inOut'
+    })
+    // Scroll Stage 3: Close plunge straight down to penthouse deck floor level
+    .to(camera.position, {
+        x: 2,
+        y: 8,
+        z: -120,
+        ease: 'power2.out'
+    })
+    // Scroll Stage 4: Enter the luxury glass structural core lobby
+    .to(camera.position, {
+        x: 0,
+        y: 3,
+        z: -120,
+        ease: 'sine.inOut'
+    });
 }
 
-},
+/**
+ * -------------------------------------------------------------
+ * 5. CONSTANT FRAME RENDER LOOP
+ * -------------------------------------------------------------
+ */
+function animateFrame() {
+    requestAnimationFrame(animateFrame);
 
-push:{
-quantity:5
+    const time = Date.now() * 0.0005;
+
+    // Subtle background organic space dust rotation
+    if (starfield) {
+        starfield.rotation.y = time * 0.02;
+    }
+
+    // Slow planetary axis rotation
+    if (earthMesh) {
+        earthMesh.rotation.y = time * 0.04;
+    }
+
+    // Soft cloud drift speed simulation
+    if (cloudParticles) {
+        cloudParticles.children.forEach((cloud, index) => {
+            cloud.rotation.y += 0.001 * (index % 2 === 0 ? 1 : -1);
+            cloud.position.y += Math.sin(time + index) * 0.002;
+        });
+    }
+
+    // Always center the camera focus tracking our master architectural tower
+    if (towerMesh) {
+        const targetVector = new THREE.Vector3();
+        towerMesh.getWorldPosition(targetVector);
+        // Slowly ease tracking target focus
+        camera.lookAt(targetVector.x, targetVector.y + 15, targetVector.z);
+    }
+
+    renderer.render(scene, camera);
 }
 
-}
-
-},
-
-detectRetina:true
-
-});
-// =======================================
-// 3D CARD EFFECT
-// =======================================
-
-document.querySelectorAll(
-
-".service-card,.floating-card,.price-card"
-
-).forEach(card=>{
-
-card.addEventListener("mousemove",(e)=>{
-
-const rect=card.getBoundingClientRect();
-
-const x=e.clientX-rect.left;
-
-const y=e.clientY-rect.top;
-
-const rotateY=((x/rect.width)-0.5)*18;
-
-const rotateX=((y/rect.height)-0.5)*-18;
-
-gsap.to(card,{
-
-rotationX:rotateX,
-
-rotationY:rotateY,
-
-transformPerspective:1000,
-
-transformOrigin:"center",
-
-duration:.45
-
+// Window resizing adaptivity
+window.addEventListener('resize', () => {
+    if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
 });
 
-});
-
-card.addEventListener("mouseleave",()=>{
-
-gsap.to(card,{
-
-rotationX:0,
-
-rotationY:0,
-
-duration:.5
-
-});
-
-});
-
-});
-// =======================================
-// MAGNETIC BUTTONS
-// =======================================
-
-document.querySelectorAll(
-
-".btn-primary,.btn-secondary"
-
-).forEach(button=>{
-
-button.addEventListener("mousemove",(e)=>{
-
-const rect=button.getBoundingClientRect();
-
-const x=e.clientX-rect.left-rect.width/2;
-
-const y=e.clientY-rect.top-rect.height/2;
-
-gsap.to(button,{
-
-x:x*.18,
-
-y:y*.18,
-
-duration:.25
-
-});
-
-});
-
-button.addEventListener("mouseleave",()=>{
-
-gsap.to(button,{
-
-x:0,
-
-y:0,
-
-duration:.45
-
-});
-
-});
-
-});
-// =======================================
-// SHOOTING STARS
-// =======================================
-
-function shootingStar(){
-
-const star=document.createElement("div");
-
-star.className="shooting-star";
-
-star.style.left=Math.random()*window.innerWidth+"px";
-
-star.style.top=Math.random()*300+"px";
-
-document.body.appendChild(star);
-
-setTimeout(()=>{
-
-star.remove();
-
-},2500);
-
-}
-
-setInterval(shootingStar,1800);
-// =======================================
-// SMOOTH ANCHORS
-// =======================================
-
-document.querySelectorAll(
-
-'a[href^="#"]'
-
-).forEach(anchor=>{
-
-anchor.addEventListener("click",(e)=>{
-
-e.preventDefault();
-
-document.querySelector(
-
-anchor.getAttribute("href")
-
-).scrollIntoView({
-
-behavior:"smooth"
-
-});
-
-});
-
-});
-
-// =======================================
-// HERO PARALLAX
-// =======================================
-
-window.addEventListener("mousemove",(e)=>{
-
-const x=e.clientX/window.innerWidth;
-
-const y=e.clientY/window.innerHeight;
-
-gsap.to(".hero-left",{
-
-x:(x-.5)*25,
-
-y:(y-.5)*20,
-
-duration:1
-
-});
-
-gsap.to(".hero-right",{
-
-x:(x-.5)*45,
-
-y:(y-.5)*35,
-
-duration:1
-
-});
-
-});
-// =======================================
-// GLOW EFFECT
-// =======================================
-
-setInterval(()=>{
-
-document.querySelectorAll(
-
-".floating-card,.service-card"
-
-).forEach(card=>{
-
-gsap.fromTo(
-
-card,
-
-{
-
-boxShadow:"0 0 20px rgba(78,137,255,.15)"
-
-},
-
-{
-
-boxShadow:"0 0 50px rgba(78,137,255,.45)",
-
-repeat:1,
-
-yoyo:true,
-
-duration:1.6
-
-});
-
-});
-
-},5000);
-
-// =======================================
-// SCROLL BAR
-// =======================================
-
-const progress=document.createElement("div");
-
-progress.style.position="fixed";
-
-progress.style.left=0;
-
-progress.style.top=0;
-
-progress.style.height="4px";
-
-progress.style.width="0%";
-
-progress.style.zIndex="999999";
-
-progress.style.background=
-
-"linear-gradient(90deg,#4e89ff,#00d4ff)";
-
-document.body.appendChild(progress);
-
-window.addEventListener("scroll",()=>{
-
-const total=document.documentElement.scrollHeight-window.innerHeight;
-
-const percent=(window.scrollY/total)*100;
-
-progress.style.width=percent+"%";
-
-});
-
-// =======================================
-// STAGGER REVEAL
-// =======================================
-
-gsap.utils.toArray(".service-card, .member, .price-card").forEach((card)=>{
-
-gsap.from(card,{
-
-opacity:0,
-
-y:80,
-
-scale:.9,
-
-duration:.8,
-
-ease:"power3.out",
-
-scrollTrigger:{
-
-trigger:card,
-
-start:"top 85%"
-
-}
-
-});
-
-});
-// =======================================
-// TEXT REVEAL
-// =======================================
-
-gsap.utils.toArray("h1,h2,h3").forEach(title=>{
-
-gsap.from(title,{
-
-opacity:0,
-
-y:40,
-
-duration:1,
-
-scrollTrigger:{
-
-trigger:title,
-
-start:"top 90%"
-
-}
-
-});
-
-});
-
-window.addEventListener("scroll",()=>{
-
-const nav=document.querySelector(".navbar");
-
-if(window.scrollY>80){
-
-nav.style.borderRadius="18px";
-
-nav.style.width="92%";
-
-nav.style.marginTop="10px";
-
-}else{
-
-nav.style.borderRadius="0";
-
-nav.style.width="100%";
-
-nav.style.marginTop="0";
-
-}
-
-});
-const topBtn=document.getElementById("topBtn");
-
-window.addEventListener("scroll",()=>{
-
-topBtn.style.display=
-
-window.scrollY>400
-
-?
-
-"block"
-
-:
-
-"none";
-
-});
-
-topBtn.onclick=()=>{
-
-window.scrollTo({
-
-top:0,
-
-behavior:"smooth"
-
-});
-
-};
+// Kickstart Three.js core instance
+initThreeEngine();
+animateFrame();
