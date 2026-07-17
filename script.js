@@ -1,9 +1,3 @@
-/**
- * AETHELGARD - Cinematic Luxury Engine
- * Powered by WebGL (Three.js), Web Audio API, and GSAP ScrollTrigger
- */
-
-// Global App States
 let scene, camera, renderer, starfield, earthMesh, atmosphereMesh, cityGroup, towerMesh, cloudParticles;
 let audioCtx, droneOsc, droneFilter, synthInterval;
 const container = document.getElementById('canvas-container');
